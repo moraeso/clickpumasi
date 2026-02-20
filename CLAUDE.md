@@ -86,7 +86,7 @@ clickpumasi/
 ### client/.env.local
 ```
 VITE_API_URL=http://localhost:3000
-VITE_KAKAO_JS_KEY=<카카오 JavaScript 키>
+VITE_KAKAO_CLIENT_ID=<카카오 REST API 키>
 ```
 
 ### server/.env

@@ -29,23 +29,50 @@ app.get('/health', (_req, res) => {
 
 app.post('/api/auth/kakao', async (req, res) => {
   try {
-    const { kakaoAccessToken } = req.body;
-    if (!kakaoAccessToken) {
-      return res.status(400).json({ error: 'kakaoAccessToken 필요' });
+    const { code, redirectUri } = req.body;
+    if (!code || !redirectUri) {
+      return res.status(400).json({ error: 'code, redirectUri 필요' });
     }
 
-    // 카카오 API로 유저 정보 조회
-    const kakaoRes = await fetch('https://kapi.kakao.com/v2/user/me', {
-      headers: { Authorization: `Bearer ${kakaoAccessToken}` },
+    const KAKAO_CLIENT_ID = process.env.KAKAO_CLIENT_ID;
+    if (!KAKAO_CLIENT_ID) {
+      return res.status(500).json({ error: 'KAKAO_CLIENT_ID 미설정' });
+    }
+
+    // 1. 인가 코드로 토큰 교환
+    const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: KAKAO_CLIENT_ID,
+        redirect_uri: redirectUri,
+        code,
+      }),
     });
 
-    if (!kakaoRes.ok) {
-      return res.status(401).json({ error: '카카오 인증 실패' });
+    if (!tokenRes.ok) {
+      const err = await tokenRes.json().catch(() => ({}));
+      console.error('Kakao token error:', err);
+      return res.status(401).json({ error: '카카오 토큰 발급 실패' });
     }
 
-    const kakaoUser = await kakaoRes.json();
+    const tokenData = await tokenRes.json();
+
+    // 2. 액세스 토큰으로 유저 정보 조회
+    const userRes = await fetch('https://kapi.kakao.com/v2/user/me', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+
+    if (!userRes.ok) {
+      return res.status(401).json({ error: '카카오 유저 정보 조회 실패' });
+    }
+
+    const kakaoUser = await userRes.json();
     const kakaoId = String(kakaoUser.id);
-    const nickname = kakaoUser.properties?.nickname ?? '익명';
+    const nickname = kakaoUser.kakao_account?.profile?.nickname
+      ?? kakaoUser.properties?.nickname
+      ?? '익명';
 
     const user = await db.ensureUser(kakaoId, nickname);
     res.json({ user });

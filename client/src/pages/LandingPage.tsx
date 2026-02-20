@@ -1,24 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { loginWithKakao, loginDev } from '@/services/api';
+import { loginDev } from '@/services/api';
 
-declare global {
-  interface Window {
-    Kakao: {
-      init: (key: string) => void;
-      isInitialized: () => boolean;
-      Auth: {
-        login: (options: {
-          success: (res: { access_token: string }) => void;
-          fail: (err: unknown) => void;
-        }) => void;
-      };
-    };
-  }
-}
-
-const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY;
+const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
+const KAKAO_REDIRECT_URI = `${window.location.origin}/auth/kakao/callback`;
 const isDev = import.meta.env.DEV;
 
 export default function LandingPage() {
@@ -28,42 +14,24 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [showDevLogin, setShowDevLogin] = useState(false);
 
-  useEffect(() => {
-    if (KAKAO_JS_KEY && window.Kakao && !window.Kakao.isInitialized()) {
-      window.Kakao.init(KAKAO_JS_KEY);
-    }
-  }, []);
-
   if (user) {
     navigate('/feed', { replace: true });
     return null;
   }
 
   const handleKakaoLogin = () => {
-    if (!window.Kakao?.Auth) {
-      alert('카카오 SDK 로딩 실패');
+    if (!KAKAO_CLIENT_ID) {
+      alert('VITE_KAKAO_CLIENT_ID가 설정되지 않았습니다');
       return;
     }
-    setLoading(true);
-    window.Kakao.Auth.login({
-      success: async (res) => {
-        try {
-          const { user } = await loginWithKakao(res.access_token);
-          setUser(user);
-          navigate('/feed');
-        } catch (err) {
-          alert('로그인 실패');
-          console.error(err);
-        } finally {
-          setLoading(false);
-        }
-      },
-      fail: (err) => {
-        console.error('Kakao login failed:', err);
-        setLoading(false);
-        alert('카카오 로그인 실패');
-      },
+
+    const params = new URLSearchParams({
+      client_id: KAKAO_CLIENT_ID,
+      redirect_uri: KAKAO_REDIRECT_URI,
+      response_type: 'code',
     });
+
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
   };
 
   const handleDevLogin = async () => {
@@ -115,7 +83,7 @@ export default function LandingPage() {
         {/* Kakao Login */}
         <button
           onClick={handleKakaoLogin}
-          disabled={loading || !KAKAO_JS_KEY}
+          disabled={loading}
           className="w-full py-3 bg-[#FEE500] text-[#191919] rounded-xl font-semibold hover:bg-[#FADA0A] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -126,12 +94,12 @@ export default function LandingPage() {
               fill="#191919"
             />
           </svg>
-          {loading ? '로그인 중...' : '카카오 로그인'}
+          카카오 로그인
         </button>
 
-        {!KAKAO_JS_KEY && (
+        {!KAKAO_CLIENT_ID && (
           <p className="text-xs text-amber-600 text-center">
-            VITE_KAKAO_JS_KEY가 설정되지 않았습니다
+            VITE_KAKAO_CLIENT_ID가 설정되지 않았습니다
           </p>
         )}
 

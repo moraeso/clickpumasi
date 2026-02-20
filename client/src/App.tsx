@@ -7,6 +7,7 @@ import MyLinksPage from '@/pages/MyLinksPage';
 import RegisterLinkPage from '@/pages/RegisterLinkPage';
 import CreditsPage from '@/pages/CreditsPage';
 import ProfilePage from '@/pages/ProfilePage';
+import KakaoCallbackPage from '@/pages/KakaoCallbackPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -28,6 +29,7 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
         <Route
           path="/feed"
           element={

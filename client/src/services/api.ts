@@ -19,10 +19,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ─── Auth ───
 
-export function loginWithKakao(kakaoAccessToken: string) {
+export function loginWithKakaoCode(code: string, redirectUri: string) {
   return request<{ user: User }>('/api/auth/kakao', {
     method: 'POST',
-    body: JSON.stringify({ kakaoAccessToken }),
+    body: JSON.stringify({ code, redirectUri }),
   });
 }
 

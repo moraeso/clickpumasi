@@ -19,10 +19,12 @@
 1. [카카오 개발자 콘솔](https://developers.kakao.com)에서 앱 생성
 2. **앱 설정 → 플랫폼 → Web** → 사이트 도메인 등록 (`http://localhost:5173`)
 3. **제품 설정 → 카카오 로그인** → 활성화
-4. **제품 설정 → 카카오 로그인 → 동의항목** → 닉네임 필수 동의
-5. **앱 키** 페이지에서:
-   - **JavaScript 키** → `client/.env.local`의 `VITE_KAKAO_JS_KEY`
-   - **REST API 키** → `server/.env`의 `KAKAO_CLIENT_ID`
+4. **제품 설정 → 카카오 로그인** → Redirect URI 등록: `http://localhost:5173/auth/kakao/callback`
+5. **제품 설정 → 카카오 로그인 → 동의항목** → 닉네임 필수 동의
+6. **앱 키** 페이지에서 **REST API 키** 복사:
+   - `client/.env.local`의 `VITE_KAKAO_CLIENT_ID`
+   - `server/.env`의 `KAKAO_CLIENT_ID`
+   - (동일한 REST API 키를 양쪽에 설정)
 
 ### 3. 서버
 ```bash
@@ -40,7 +42,7 @@ npm install
 # .env.local 생성
 cat > .env.local << EOF
 VITE_API_URL=http://localhost:3000
-VITE_KAKAO_JS_KEY=<카카오 JavaScript 키>
+VITE_KAKAO_CLIENT_ID=<카카오 REST API 키>
 EOF
 npm run dev  # http://localhost:5173
 ```
@@ -58,7 +60,7 @@ PORT=3000
 ### client/.env.local
 ```
 VITE_API_URL=http://localhost:3000
-VITE_KAKAO_JS_KEY=<카카오 JavaScript 키>
+VITE_KAKAO_CLIENT_ID=<카카오 REST API 키>
 ```
 
 ## 트러블슈팅
@@ -68,5 +70,5 @@ VITE_KAKAO_JS_KEY=<카카오 JavaScript 키>
 | "Missing Supabase environment variables" | `.env` 파일 확인 |
 | "relation does not exist" | SQL 마이그레이션 실행 |
 | CORS 에러 | `server/src/index.ts`의 `allowedOrigins` 확인 |
-| 카카오 로그인 안 됨 | 카카오 콘솔에서 Web 플랫폼 도메인 등록 확인 |
-| "VITE_KAKAO_JS_KEY가 설정되지 않았습니다" | `client/.env.local`에 JavaScript 키 입력 |
+| 카카오 로그인 안 됨 | 카카오 콘솔에서 Web 플랫폼 도메인 + Redirect URI 등록 확인 |
+| "VITE_KAKAO_CLIENT_ID가 설정되지 않았습니다" | `client/.env.local`에 REST API 키 입력 |
