@@ -29,7 +29,6 @@ export default function LandingPage() {
       client_id: KAKAO_CLIENT_ID,
       redirect_uri: KAKAO_REDIRECT_URI,
       response_type: 'code',
-      scope: 'profile_nickname',
     });
 
     window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
