@@ -35,20 +35,33 @@ app.post('/api/auth/kakao', async (req, res) => {
     }
 
     const KAKAO_CLIENT_ID = process.env.KAKAO_CLIENT_ID;
+    const KAKAO_CLIENT_SECRET = process.env.KAKAO_CLIENT_SECRET;
     if (!KAKAO_CLIENT_ID) {
       return res.status(500).json({ error: 'KAKAO_CLIENT_ID 미설정' });
     }
 
     // 1. 인가 코드로 토큰 교환
+    const tokenParams: Record<string, string> = {
+      grant_type: 'authorization_code',
+      client_id: KAKAO_CLIENT_ID,
+      redirect_uri: redirectUri,
+      code,
+    };
+    if (KAKAO_CLIENT_SECRET) {
+      tokenParams.client_secret = KAKAO_CLIENT_SECRET;
+    }
+
+    console.log('Kakao token request:', {
+      client_id: KAKAO_CLIENT_ID,
+      redirect_uri: redirectUri,
+      has_secret: !!KAKAO_CLIENT_SECRET,
+      code: code.substring(0, 20) + '...',
+    });
+
     const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: KAKAO_CLIENT_ID,
-        redirect_uri: redirectUri,
-        code,
-      }),
+      body: new URLSearchParams(tokenParams),
     });
 
     if (!tokenRes.ok) {

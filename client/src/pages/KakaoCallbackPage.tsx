@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { loginWithKakaoCode } from '@/services/api';
@@ -9,17 +9,12 @@ export default function KakaoCallbackPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const processed = useRef(false);
 
   useEffect(() => {
-    if (processed.current) return;
-    processed.current = true;
-
     const code = searchParams.get('code');
     const error = searchParams.get('error');
 
     if (error) {
-      console.error('Kakao auth error:', error, searchParams.get('error_description'));
       alert('카카오 로그인이 취소되었습니다');
       navigate('/', { replace: true });
       return;
@@ -30,17 +25,23 @@ export default function KakaoCallbackPage() {
       return;
     }
 
+    // 같은 code로 중복 호출 방지
+    const key = `kakao_code_${code}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+
     loginWithKakaoCode(code, KAKAO_REDIRECT_URI)
       .then(({ user }) => {
         setUser(user);
         navigate('/feed', { replace: true });
       })
       .catch((err) => {
+        sessionStorage.removeItem(key);
         console.error('Login failed:', err);
         alert('로그인 실패: ' + err.message);
         navigate('/', { replace: true });
       });
-  }, [searchParams, navigate, setUser]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col items-center justify-center min-h-dvh">

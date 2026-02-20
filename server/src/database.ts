@@ -18,7 +18,19 @@ export async function ensureUser(kakaoId: string, nickname: string) {
     .eq('kakao_id', kakaoId)
     .single();
 
-  if (existing) return existing;
+  if (existing) {
+    // 닉네임이 변경되었으면 업데이트
+    if (nickname && nickname !== '익명' && existing.nickname !== nickname) {
+      const { data } = await supabase
+        .from('users')
+        .update({ nickname })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      return data ?? existing;
+    }
+    return existing;
+  }
 
   const { data, error } = await supabase
     .from('users')
