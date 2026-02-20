@@ -133,17 +133,14 @@ export async function recordClick(clickerId: string, linkId: string) {
   return data;
 }
 
-export async function confirmClick(clickLogId: string, stayDuration: number) {
-  const { data, error } = await supabase
-    .from('click_logs')
-    .update({ stay_duration: stayDuration, credit_earned: true })
-    .eq('id', clickLogId)
-    .eq('credit_earned', false)
-    .select()
-    .single();
+export async function confirmClickAndEarn(clickLogId: string, stayDuration: number, clickerId: string) {
+  const { error } = await supabase.rpc('confirm_click_and_earn', {
+    p_click_log_id: clickLogId,
+    p_stay_duration: stayDuration,
+    p_clicker_id: clickerId,
+  });
 
   if (error) throw error;
-  return data;
 }
 
 export async function getClickedLinkIds(userId: string) {

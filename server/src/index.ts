@@ -179,25 +179,16 @@ app.post('/api/clicks/confirm', async (req, res) => {
     }
 
     // 일일 클릭 상한 확인 (20회)
-    const today = new Date().toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }).replace(/\. /g, '-').replace('.', '');
-    const todayFormatted = new Date(
-      new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' })
-    ).toISOString().split('T')[0];
+    const now = new Date();
+    const todayKST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+    const todayFormatted = `${todayKST.getFullYear()}-${String(todayKST.getMonth() + 1).padStart(2, '0')}-${String(todayKST.getDate()).padStart(2, '0')}`;
     const dailyCount = await db.getDailyClickCount(userId, todayFormatted);
     if (dailyCount >= 20) {
       return res.status(400).json({ error: '일일 클릭 상한 초과 (20회/일)' });
     }
 
-    // 클릭 확인 + 크레딧 적립
-    const clickLog = await db.confirmClick(clickLogId, stayDuration);
-    await db.addCredit(userId, 1, 'click', clickLogId);
-
-    // 링크 소유자의 credits_remaining 차감
-    const link = await db.getLinkByShortCode(''); // clickLog에서 link_id 가져와야 함
-    // 실제로는 click_log의 link_id를 사용
-    await db.updateLink(clickLog.link_id, {
-      click_count: undefined, // RPC로 처리
-    });
+    // 클릭 확인 + 크레딧 적립 (RPC로 원자적 처리)
+    await db.confirmClickAndEarn(clickLogId, stayDuration, userId);
 
     res.json({ success: true, creditEarned: 1 });
   } catch (err) {
