@@ -1,19 +1,70 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { loginDev } from '@/services/api';
+import { loginWithKakao, loginDev } from '@/services/api';
+
+declare global {
+  interface Window {
+    Kakao: {
+      init: (key: string) => void;
+      isInitialized: () => boolean;
+      Auth: {
+        login: (options: {
+          success: (res: { access_token: string }) => void;
+          fail: (err: unknown) => void;
+        }) => void;
+      };
+    };
+  }
+}
+
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY;
+const isDev = import.meta.env.DEV;
 
 export default function LandingPage() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDevLogin, setShowDevLogin] = useState(false);
 
-  // 이미 로그인되어 있으면 피드로
+  useEffect(() => {
+    if (KAKAO_JS_KEY && window.Kakao && !window.Kakao.isInitialized()) {
+      window.Kakao.init(KAKAO_JS_KEY);
+    }
+  }, []);
+
   if (user) {
     navigate('/feed', { replace: true });
     return null;
   }
+
+  const handleKakaoLogin = () => {
+    if (!window.Kakao?.Auth) {
+      alert('카카오 SDK 로딩 실패');
+      return;
+    }
+    setLoading(true);
+    window.Kakao.Auth.login({
+      success: async (res) => {
+        try {
+          const { user } = await loginWithKakao(res.access_token);
+          setUser(user);
+          navigate('/feed');
+        } catch (err) {
+          alert('로그인 실패');
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      },
+      fail: (err) => {
+        console.error('Kakao login failed:', err);
+        setLoading(false);
+        alert('카카오 로그인 실패');
+      },
+    });
+  };
 
   const handleDevLogin = async () => {
     if (!nickname.trim()) return;
@@ -59,26 +110,66 @@ export default function LandingPage() {
         ))}
       </div>
 
-      {/* Dev Login */}
+      {/* Login Buttons */}
       <div className="w-full max-w-sm space-y-3">
-        <input
-          type="text"
-          placeholder="닉네임 입력"
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleDevLogin()}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+        {/* Kakao Login */}
         <button
-          onClick={handleDevLogin}
-          disabled={loading || !nickname.trim()}
-          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          onClick={handleKakaoLogin}
+          disabled={loading || !KAKAO_JS_KEY}
+          className="w-full py-3 bg-[#FEE500] text-[#191919] rounded-xl font-semibold hover:bg-[#FADA0A] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
         >
-          {loading ? '로그인 중...' : '시작하기'}
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M9 0.5C4.029 0.5 0 3.588 0 7.39C0 9.797 1.558 11.911 3.932 13.186L2.933 16.773C2.844 17.08 3.213 17.326 3.478 17.145L7.694 14.322C8.123 14.368 8.558 14.393 9 14.393C13.971 14.393 18 11.305 18 7.503C18 3.7 13.971 0.5 9 0.5Z"
+              fill="#191919"
+            />
+          </svg>
+          {loading ? '로그인 중...' : '카카오 로그인'}
         </button>
-        <p className="text-xs text-slate-400 text-center">
-          개발용 간편 로그인 (MVP)
-        </p>
+
+        {!KAKAO_JS_KEY && (
+          <p className="text-xs text-amber-600 text-center">
+            VITE_KAKAO_JS_KEY가 설정되지 않았습니다
+          </p>
+        )}
+
+        {/* Dev Login Toggle */}
+        {isDev && (
+          <>
+            <div className="flex items-center gap-3 my-2">
+              <div className="flex-1 h-px bg-slate-200" />
+              <button
+                onClick={() => setShowDevLogin(!showDevLogin)}
+                className="text-xs text-slate-400 hover:text-slate-600"
+              >
+                {showDevLogin ? '접기' : '개발용 로그인'}
+              </button>
+              <div className="flex-1 h-px bg-slate-200" />
+            </div>
+
+            {showDevLogin && (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="닉네임 입력"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleDevLogin()}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-center text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={handleDevLogin}
+                  disabled={loading || !nickname.trim()}
+                  className="w-full py-2.5 bg-slate-700 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                >
+                  개발용 로그인
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
